@@ -79,6 +79,10 @@ entity machine is
          
          no_hyppo : in std_logic;
 
+         disco_led_id : out unsigned(7 downto 0) := x"00";
+         disco_led_val : out unsigned(7 downto 0) := x"00";
+         disco_led_en : out std_logic := '0';
+
          flopled : out std_logic;
          flopmotor : out std_logic;
 
@@ -1363,6 +1367,10 @@ begin
 
       porto_out => porto_out,
       portp_out => portp_out,
+
+      disco_led_en => disco_led_en,
+      disco_led_id => disco_led_id,
+      disco_led_val => disco_led_val,      
       
       buffereduart_rx => buffereduart_rx,
       buffereduart_tx => buffereduart_tx,
