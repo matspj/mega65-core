@@ -55,7 +55,8 @@ architecture behavioural of mega65kbd_to_matrix is
 
   signal counter : unsigned(26 downto 0) := to_unsigned(0,27);
   
-  signal output_vector : std_logic_vector(127 downto 0);
+  signal output_vector : std_logic_vector(127 downto 0) := (others => '0');
+  signal led_colours : std_logic_vector(95 downto 0) := (others => '0');
 
   signal deletekey : std_logic := '1';
   signal returnkey : std_logic := '1';
@@ -174,8 +175,9 @@ begin  -- behavioural
             if disco_led_en = '1' then
               -- Allow simple RGB control of the LEDs
               if disco_led_id < 12 then
-                output_vector(7+to_integer(disco_led_id)*8 downto to_integer(disco_led_id)*8) <= std_logic_vector(disco_led_val);
+                led_colours(7+to_integer(disco_led_id)*8 downto to_integer(disco_led_id)*8) <= std_logic_vector(disco_led_val);
               end if;
+              output_vector(95 downto 0) <= led_colours;
             else
               if flopmotor='1' or (flopled='1' and counter(24)='1') then
                 output_vector(23 downto 0) <= x"00FF00";
