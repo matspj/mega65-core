@@ -40,8 +40,8 @@ programentrypoint:
 	; Clear out keyboard LEDs
 	lda #$00
 	sta $d61e
-l3:	lda #$80
-	sta $d61d
+	lda #$80
+l3:	sta $d61d
 	clc
 	adc #$01
 	cmp #$92
@@ -79,7 +79,6 @@ l2:
 	sta $d61d
 	lda #$ff
 	sta $d61e
-	
 
 	jmp loop
 	
