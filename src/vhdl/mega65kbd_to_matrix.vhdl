@@ -160,6 +160,10 @@ begin  -- behavioural
         end if;        
         matrix_ram_offset <= keyram_offset;
         keyram_wea <= keyram_write_enable;
+
+        if disco_led_id < 12 then
+          led_colours(7+to_integer(disco_led_id)*8 downto to_integer(disco_led_id)*8) <= std_logic_vector(disco_led_val);
+        end if;
         
         if kbd_clock='0' then
           report "phase = " & integer'image(phase) & ", sync=" & std_logic'image(sync_pulse);
@@ -174,9 +178,6 @@ begin  -- behavioural
             output_vector <= (others => '0');
             if disco_led_en = '1' then
               -- Allow simple RGB control of the LEDs
-              if disco_led_id < 12 then
-                led_colours(7+to_integer(disco_led_id)*8 downto to_integer(disco_led_id)*8) <= std_logic_vector(disco_led_val);
-              end if;
               output_vector(95 downto 0) <= led_colours;
             else
               if flopmotor='1' or (flopled='1' and counter(24)='1') then

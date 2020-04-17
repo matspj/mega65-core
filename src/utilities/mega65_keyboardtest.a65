@@ -69,6 +69,13 @@ loop:
 	lda #$00
 	sta $d61e
 
+	; Allow enough time for LED colours to update
+	lda $d012
+	sec
+	sbc #$01
+l5:	cmp $d012
+	bne l5
+
 	inx
 	cpx #12
 	bne l2
