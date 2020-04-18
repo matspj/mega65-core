@@ -196,7 +196,7 @@ architecture Behavioral of container is
   signal clock120 : std_logic;
   signal clock100 : std_logic;
   signal clock162 : std_logic;
-  signal clock163 : std_logic;
+  signal clock325 : std_logic;
 
   signal segled_counter : unsigned(31 downto 0) := (others => '0');
 
@@ -303,6 +303,10 @@ architecture Behavioral of container is
   signal widget_matrix_col : std_logic_vector(7 downto 0) := (others => '1');
 
   signal qspi_clock : std_logic;
+
+  signal current_cache_line : cache_row_t := (others => (others => '0'));
+  signal current_cache_line_address : unsigned(26 downto 3) := (others => '0');
+  signal current_cache_line_valid : std_logic := '0';
   
 begin
 
@@ -348,8 +352,8 @@ begin
                clock41 => cpuclock, -- 40MHz
                clock50 => ethclock,
                clock162 => clock162,
-               clock27 => clock27
---               clock54 => clock54
+               clock27 => clock27,
+               clock325 => clock325
                );
 
 
@@ -362,11 +366,14 @@ begin
 
   hyperram0: entity work.hyperram
     port map (
---      latency_1x => to_unsigned(4,8),
---      latency_2x => to_unsigned(8,8),
---      reset => reset_out,
-      cpuclock => cpuclock,
-      clock240 => clock163,
+      pixelclock => pixelclock,
+      clock163 => clock162,
+      clock325 => clock325,
+
+      -- XXX Debug by showing if expansion RAM unit is receiving requests or not
+      request_counter => led,
+      
+      -- reset => reset_out,
       address => expansionram_address,
       wdata => expansionram_wdata,
       read_request => expansionram_read,
@@ -374,13 +381,19 @@ begin
       rdata => expansionram_rdata,
       data_ready_strobe => expansionram_data_ready_strobe,
       busy => expansionram_busy,
+
+      current_cache_line => current_cache_line,
+      current_cache_line_address => current_cache_line_address,
+      current_cache_line_valid => current_cache_line_valid,     
+      
       hr_d => hr_d,
       hr_rwds => hr_rwds,
       hr_reset => hr_reset,
-      hr_clk_n => hr_clk_n,
       hr_clk_p => hr_clk_p,
+      hr_clk_n => hr_clk_n,
       hr_cs0 => hr_cs0,
       hr_cs1 => hr_cs1
+      
       );
   
   slow_devices0: entity work.slow_devices
@@ -416,6 +429,9 @@ begin
       expansionram_data_ready_strobe => expansionram_data_ready_strobe,
       expansionram_busy => expansionram_busy,
 
+      expansionram_current_cache_line => current_cache_line,
+      expansionram_current_cache_line_address => current_cache_line_address,
+      expansionram_current_cache_line_valid => current_cache_line_valid,
 
       ----------------------------------------------------------------------
       -- Expansion/cartridge port
