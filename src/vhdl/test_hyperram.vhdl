@@ -13,6 +13,7 @@ architecture foo of test_hyperram is
   signal cpuclock : std_logic := '1';
   signal pixelclock : std_logic := '1';
   signal clock163 : std_logic := '1';
+  signal clock325 : std_logic := '1';
 
   signal expansionram_read : std_logic;
   signal expansionram_write : std_logic := '0';
@@ -33,6 +34,13 @@ architecture foo of test_hyperram is
   signal hr_clk_p : std_logic := '0';
   signal hr_cs0 : std_logic := '0';
 
+  signal hr2_d : unsigned(7 downto 0) := (others => '0');
+  signal hr2_rwds : std_logic := '0';
+  signal hr2_reset : std_logic := '1';
+  signal hr2_clk_n : std_logic := '0';
+  signal hr2_clk_p : std_logic := '0';
+  signal hr2_cs0 : std_logic := '0';
+  
   signal slow_access_request_toggle : std_logic := '0';
   signal slow_access_ready_toggle : std_logic;
   signal last_slow_access_ready_toggle : std_logic;
@@ -55,7 +63,28 @@ architecture foo of test_hyperram is
   type mem_job_list_t is array(0 to 99) of mem_transaction_t;
 
   signal mem_jobs : mem_job_list_t := (
-    (address => x"8000000", write_p => '0', value => x"FF"),
+    (address => x"8801001", write_p => '1', value => x"91"),
+    (address => x"8801001", write_p => '0', value => x"91"),
+    (address => x"8800800", write_p => '1', value => x"00"),
+    (address => x"8800808", write_p => '1', value => x"08"),
+    (address => x"8800810", write_p => '1', value => x"10"),
+    (address => x"8800818", write_p => '1', value => x"18"),
+    (address => x"8800820", write_p => '1', value => x"20"),
+    (address => x"8800828", write_p => '1', value => x"28"),
+    (address => x"8800830", write_p => '1', value => x"30"),
+    (address => x"8800838", write_p => '1', value => x"38"),
+    (address => x"8800840", write_p => '1', value => x"40"),
+    (address => x"8800808", write_p => '1', value => x"48"),
+    (address => x"8800800", write_p => '0', value => x"00"),
+    (address => x"8800800", write_p => '1', value => x"40"),
+    (address => x"8800808", write_p => '0', value => x"48"),
+    (address => x"8800810", write_p => '0', value => x"10"),
+    (address => x"8800818", write_p => '0', value => x"18"),
+    (address => x"8800820", write_p => '0', value => x"20"),
+    (address => x"8800828", write_p => '0', value => x"28"),
+    (address => x"8800830", write_p => '0', value => x"30"),
+    (address => x"8800838", write_p => '0', value => x"38"),
+    (address => x"8800840", write_p => '0', value => x"40"),
 
 
     -- Write 16 bytes, first the evens and then the odds
@@ -146,6 +175,7 @@ begin
     port map (
       pixelclock => pixelclock,
       clock163 => clock163,
+      clock325 => clock325,
       address => expansionram_address,
       wdata => expansionram_wdata,
       read_request => expansionram_read,
@@ -163,7 +193,15 @@ begin
       hr_reset => hr_reset,
       hr_clk_n => hr_clk_n,
       hr_clk_p => hr_clk_p,
-      hr_cs0 => hr_cs0
+      hr_cs0 => hr_cs0,
+
+      hr2_d => hr2_d,
+      hr2_rwds => hr2_rwds,
+      hr2_reset => hr2_reset,
+      hr2_clk_n => hr2_clk_n,
+      hr2_clk_p => hr2_clk_p,
+      hr_cs1 => hr2_cs0
+      
       );
 
   fakehyper0: entity work.s27kl0641
@@ -188,6 +226,28 @@ begin
       );
     
 
+  fakehyper1: entity work.s27kl0641
+    generic map (
+      tdevice_vcs => 5 ns,
+      timingmodel => "S27KL0641DABHI000"
+      )
+    port map (
+      DQ7 => hr2_d(7),
+      DQ6 => hr2_d(6),
+      DQ5 => hr2_d(5),
+      DQ4 => hr2_d(4),
+      DQ3 => hr2_d(3),
+      DQ2 => hr2_d(2),
+      DQ1 => hr2_d(1),
+      DQ0 => hr2_d(0),
+
+      CSNeg => hr2_cs0,
+      CK => hr2_clk_p,
+      RESETneg => hr2_reset,
+      RWDS => hr2_rwds
+      );
+    
+  
   slow_devices0: entity work.slow_devices
     generic map (
       target => mega65r2
@@ -244,7 +304,9 @@ begin
   
 
   
-  process(hr_cs0, hr_clk_p, hr_reset, hr_rwds, hr_d) is
+  process(hr_cs0, hr_clk_p, hr_reset, hr_rwds, hr_d,
+          hr2_cs0, hr2_clk_p, hr2_reset, hr2_rwds, hr2_d
+          ) is
   begin
     report
       "hr_cs0 = " & std_logic'image(hr_cs0) & ", " &
@@ -259,6 +321,20 @@ begin
       & std_logic'image(hr_d(5))
       & std_logic'image(hr_d(6))
       & std_logic'image(hr_d(7))
+      & ".";
+    report
+      "hr2_cs0 = " & std_logic'image(hr2_cs0) & ", " &
+      "hr2_clk_p = " & std_logic'image(hr2_clk_p) & ", " &
+      "hr2_reset = " & std_logic'image(hr2_reset) & ", " &
+      "hr2_rwds = " & std_logic'image(hr2_rwds) & ", " &
+      "hr2_d = " & std_logic'image(hr2_d(0))
+      & std_logic'image(hr2_d(1))
+      & std_logic'image(hr2_d(2))
+      & std_logic'image(hr2_d(3))
+      & std_logic'image(hr2_d(4))
+      & std_logic'image(hr2_d(5))
+      & std_logic'image(hr2_d(6))
+      & std_logic'image(hr2_d(7))
       & ".";
   end process;
   
@@ -278,6 +354,7 @@ begin
           report "DISPATCH: ERROR: Expected $" & to_hstring(expected_value) & ", but saw $" & to_hstring(slow_access_rdata);
         end if;
       end if;
+      expect_value <= '0';
       last_slow_access_ready_toggle <= slow_access_ready_toggle;
     end if;
 
@@ -285,7 +362,7 @@ begin
 
       if idle_wait /= 0 then
         idle_wait <= idle_wait - 1;
-      else
+      elsif expect_value = '0' and slow_access_ready_toggle = slow_access_request_toggle then
 
         if mem_jobs(cycles).address = x"FFFFFFF" then
           cycles <= 0;
@@ -302,14 +379,14 @@ begin
         if (mem_jobs(cycles).write_p='0') then
           -- Let reads finish serially
           -- (In the worst case, this can take quite a while)
-          idle_wait <= 20;
+          idle_wait <= 40;
           report "DISPATCH: Reading from $" & to_hstring(mem_jobs(cycles).address) & ", expecting to see $"
             & to_hstring(mem_jobs(cycles).value);
           expect_value <= '1';
           expected_value <= mem_jobs(cycles).value;
         else
           -- Try to rush writes, so that writes get merged
-          idle_wait <= 0;
+          idle_wait <= 40;
           report "DISPATCH: Writing to $" & to_hstring(mem_jobs(cycles).address) & " <- $"
             & to_hstring(mem_jobs(cycles).value);
           expect_value <= '0';
@@ -318,29 +395,68 @@ begin
     end if;
     
 
+    clock325 <= '0';
     pixelclock <= '0';
     cpuclock <= '0';
     clock163 <= '0';
-    wait for 3 ns;
+
+    clock325 <= '1';
+    wait for 1.5 ns;
+    clock325 <= '0';
+    wait for 1.5 ns;
+    
     clock163 <= '1';
-    wait for 3 ns;
+
+    clock325 <= '1';
+    wait for 1.5 ns;
+    clock325 <= '0';
+    wait for 1.5 ns;
+
     pixelclock <= '1';
     clock163 <= '0';
-    wait for 3 ns;
+
+    clock325 <= '1';
+    wait for 1.5 ns;
+    clock325 <= '0';
+    wait for 1.5 ns;
+
     clock163 <= '1';
-    wait for 3 ns;
+
+    clock325 <= '1';
+    wait for 1.5 ns;
+    clock325 <= '0';
+    wait for 1.5 ns;
 
     pixelclock <= '0';
     cpuclock <= '1';
     clock163 <= '0';
-    wait for 3 ns;
+
+    clock325 <= '1';
+    wait for 1.5 ns;
+    clock325 <= '0';
+    wait for 1.5 ns;
+
     clock163 <= '1';
-    wait for 3 ns;
+
+    clock325 <= '1';
+    wait for 1.5 ns;
+    clock325 <= '0';
+    wait for 1.5 ns;
+
     pixelclock <= '1';
     clock163 <= '0';
-    wait for 3 ns;
+
+    clock325 <= '1';
+    wait for 1.5 ns;
+    clock325 <= '0';
+    wait for 1.5 ns;
+
     clock163 <= '1';
-    wait for 3 ns;
+
+    clock325 <= '1';
+    wait for 1.5 ns;
+    clock325 <= '0';
+    wait for 1.5 ns;
 
 --    report "40MHz CPU clock cycle finished";
     

@@ -36,57 +36,8 @@ programentrypoint:
 	lda #$ff
 	sta $d615
 	sta $d616
-
-	; Clear out keyboard LEDs
-	lda #$00
-	sta $d61e
-	lda #$80
-l3:	sta $d61d
-	clc
-	adc #$01
-	cmp #$92
-	bne l3
-
-	; set first keyboard LED on
-	lda #$80
-	sta $d61d
-	lda #$ff
-	sta $d61e
-
-	ldx #$00
-
+	
 loop:
-
-	; Cycle LED colours whenever a key is pressed
-	lda $d610
-	cmp #$00
-	beq loop
-	sta $d610
-
-	txa
-	ora #$80
-	sta $d61d
-	lda #$00
-	sta $d61e
-
-	; Allow enough time for LED colours to update
-	lda $d012
-	sec
-	sbc #$01
-l5:	cmp $d012
-	bne l5
-
-	inx
-	cpx #12
-	bne l2
-	ldx #0
-l2:
-	txa
-	ora #$80
-	sta $d61d
-	lda #$ff
-	sta $d61e
-
 	jmp loop
 	
 	.byte 	"PROP.M65U.NAME=KEYBOARD TEST"

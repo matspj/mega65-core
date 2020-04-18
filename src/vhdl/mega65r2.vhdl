@@ -107,6 +107,14 @@ entity container is
          hr_clk_p : out std_logic;
 --         hr_clk_n : out std_logic;
          hr_cs0 : out std_logic;
+
+         -- Optional 2nd hyperram in trap-door slot
+         hr2_d : inout unsigned(7 downto 0);
+         hr2_rwds : inout std_logic;
+         hr2_reset : out std_logic;
+         hr2_clk_p : out std_logic;
+         hr2_cs0 : out std_logic;
+
          
          ----------------------------------------------------------------------
          -- CBM floppy serial port
@@ -195,12 +203,6 @@ entity container is
          pcspeaker_left : out std_logic;
          pcspeaker_muten : out std_logic;
 
-         -- PMOD connectors on the MEGA65 R2 main board
-         p1lo : inout std_logic_vector(3 downto 0);
-         p1hi : inout std_logic_vector(3 downto 0);
-         p2lo : inout std_logic_vector(3 downto 0);
-         p2hi : inout std_logic_vector(3 downto 0);
-         
          ----------------------------------------------------------------------
          -- Floppy drive interface
          ----------------------------------------------------------------------
@@ -237,6 +239,14 @@ end container;
 
 architecture Behavioral of container is
 
+  -- PMOD connectors on the MEGA65 R2 main board
+  -- In this build, they are instead dedicated to a 2nd hyperram
+  -- chip on a daughter board.
+  signal p1lo : std_logic_vector(3 downto 0) := (others => '0');
+  signal p1hi : std_logic_vector(3 downto 0) := (others => '0');
+  signal p2lo : std_logic_vector(3 downto 0) := (others => '0');
+  signal p2hi : std_logic_vector(3 downto 0) := (others => '0');
+  
   signal irq : std_logic := '1';
   signal nmi : std_logic := '1';
   signal irq_combined : std_logic := '1';
@@ -256,6 +266,7 @@ architecture Behavioral of container is
   signal clock120 : std_logic;
   signal clock100 : std_logic;
   signal clock162 : std_logic;
+  signal clock325 : std_logic;
 
   -- XXX Actually connect to new keyboard
   signal restore_key : std_logic := '1';
@@ -416,8 +427,8 @@ begin
                clock41 => cpuclock, -- 40MHz
                clock50 => ethclock,
                clock162 => clock162,
-               clock27 => clock27
---               clock54 => clock54
+               clock27 => clock27,
+               clock325 => clock325
                );
 
   fpgatemp0: entity work.fpgatemp
@@ -488,6 +499,7 @@ begin
     port map (
       pixelclock => pixelclock,
       clock163 => clock162,
+      clock325 => clock325,
 
       -- XXX Debug by showing if expansion RAM unit is receiving requests or not
       request_counter => led,
@@ -510,7 +522,14 @@ begin
       hr_reset => hr_reset,
       hr_clk_p => hr_clk_p,
 --      hr_clk_n => hr_clk_n,
-      hr_cs0 => hr_cs0
+      hr_cs0 => hr_cs0,
+      hr_cs1 => hr2_cs0,
+
+      hr2_d => hr2_d,
+      hr2_rwds => hr2_rwds,
+      hr2_reset => hr2_reset,
+      hr2_clk_p => hr2_clk_p
+      
       );
 
 --  fakehyper0: entity work.fakehyperram
