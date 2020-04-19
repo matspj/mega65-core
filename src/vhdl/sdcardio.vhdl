@@ -482,6 +482,9 @@ architecture behavioural of sdcardio is
   signal flash_boot_address : unsigned(31 downto 0) := x"FFFFFFFF";
 
   signal icape2_reg : unsigned(4 downto 0) := "10110";
+
+  signal audio_loopback_latch : std_logic := '0';
+  signal audio_loopback_latched_lo : unsigned(7 downto 0) := x"00";
   
   function resolve_sector_buffer_address(f011orsd : std_logic; addr : unsigned(8 downto 0))
     return integer is
@@ -1198,7 +1201,11 @@ begin  -- behavioural
             fastio_rdata <= pcm_right(15 downto 8);
           when x"FC" =>
             -- @IO:GS $D6FC - audio LSB (source selected by $D6F4)
-            fastio_rdata <= audio_loopback(7 downto 0);
+            if audio_loopback_latch='0' then
+              fastio_rdata <= audio_loopback(7 downto 0);
+            else
+              fastio_rdata <= audio_loopback_latched_lo;
+            end if;
           when x"FD" =>
             -- @IO:GS $D6FD - audio MSB (source selected by $D6F4)
             fastio_rdata <= audio_loopback(15 downto 8);
@@ -1213,6 +1220,23 @@ begin  -- behavioural
       fastio_rdata <= (others => 'Z');
     end if;
 
+    if rising_edge(clock) then    
+      if fastio_read='1' and sectorbuffercs='0' then
+        if (sdcardio_cs='1' and f011_cs='0')
+          and (secure_mode='0' or fastio_addr(7 downto 4) = x"B" or fastio_addr(7 downto 4) = x"F") then
+          case fastio_addr(7 downto 0) is
+            when x"FD" =>
+              audio_loopback_latch <= '1';
+              audio_loopback_latched_lo <= audio_loopback(7 downto 0);
+            when x"FC" =>
+              audio_loopback_latch <= '0';
+            when others =>
+              null;
+          end case;
+        end if;
+      end if;
+    end if;
+    
     -- output select
     if (f011_cs='1' or sdcardio_cs='1' or sectorbuffercs='1' or sectorbuffercs_fast='1') and secure_mode='0' and fastio_read='1' then
       report "Exporting value to fastio_read";
