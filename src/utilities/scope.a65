@@ -8,6 +8,10 @@
 	.alias sample_shift $c001
 	.alias sample_offset $c002
 
+	.alias samplelo $fd
+	.alias samplehi $fe
+
+
 ; Include C64 BASIC program load header
 
          .word $0801
@@ -198,10 +202,6 @@ drawloop:
 	tay
 	jsr plotpixel
 
-	lda previoussamples2,x
-	tay
-	jsr plotpixel
-
 	dex
 	bne drawloop
 
@@ -213,18 +213,62 @@ drawloop:
 
 	; Then read 256 samples
      ;	ldx #$00
-nextsample:
-;	lda $d012
-;wait:	cmp $d012
-;	beq wait
 
+     lda #$07
+     sta $d020
+
+peakwait:
+
+	; Get 8 low bytes of samples in a row
+     ldy #7
+w9:     lda $d6fc
+     sta $a008,y
+     dey
+     bpl w9
+
+     ; Check if they are descending followed by ascending
+     lda $a008
+     sec
+     sbc $a00c
+     bpl peakwait
+     lda $a00c
+     sec
+     sbc $a00f
+     bmi peakwait
+
+
+     lda #$01
+     sta $d020
+nextsample:
         ; get msb and lsb of audio sample
 
 	; shift it left a few bits
-        lda $d6fc
+	; Read high byte first to cause low byte of sample to
+	; be latched, and thus avoid glitching if the high byte
+	; changes before the low byte of the sample can be read.
 	ldy $d6fd
-	sta samplelo	
-	sty samplehi
+        lda $d6fc
+	sta rawsampleslo,x
+	tya
+	sta rawsampleshi,x
+
+	ldy sample_speed
+speed_loop:
+	iny
+	bne speed_loop
+	
+	inx
+	bne nextsample
+
+	lda #$02
+	sta $d020
+
+processsamples:
+
+	lda rawsampleslo,x
+	sta samplelo
+	lda rawsampleshi,x
+	sta samplehi
 
 	ldy sample_shift
 	beq sample_shift_done
@@ -240,42 +284,10 @@ sample_shift_done:
         lda samplehi
 	clc
 	adc sample_offset
-	sta previoussamples2,x
-
-;        ; select microphone 1 audio
-;        lda #$0b
-;        sta $d6f4
-;
-;	; shift it left a few bits
-;       lda $d6fc
-;	sta samplelo
-;	lda $d6fd
-;	sta samplehi
-;
-;	asl samplelo
-;	rol samplehi
-;
-;	asl samplelo
-;	rol samplehi
-;
-;	lda samplehi
-;	clc
-;	adc #$80
-;
-;	; XXX Ignofre sample for now
-	lda #$00
-
 	sta previoussamples,x
 
-	ldy sample_speed
-speed_loop:
-	iny
-	bne speed_loop
-	
-	inc $d020
-
 	inx
-	bne nextsample
+	bne processsamples
 
 	lda #$00
 	sta $d020
@@ -523,9 +535,6 @@ dmalist:
 		.word $0000 ; modulo (unused)
 
 
-samplelo:    .byte 0
-samplehi:    .byte 0
-
 previoussamples:
 		.byte "                                "
 		.byte "                                "
@@ -535,7 +544,16 @@ previoussamples:
 		.byte "                                "
 		.byte "                                "
 		.byte "                                "
-previoussamples2:
+rawsampleslo:
+		.byte "                                "
+		.byte "                                "
+		.byte "                                "
+		.byte "                                "
+		.byte "                                "
+		.byte "                                "
+		.byte "                                "
+		.byte "                                "
+rawsampleshi:
 		.byte "                                "
 		.byte "                                "
 		.byte "                                "
