@@ -91,7 +91,7 @@ unsigned char viciv_regs[0x100];
 int mode_report=0;
 
 int serial_speed=2000000;
-char *serial_port="/dev/ttyUSB1";
+char serial_port[1024]="/dev/ttyUSB1";
 char *bitstream=NULL;
 
 unsigned char *sd_read_buffer=NULL;
