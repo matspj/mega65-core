@@ -4,6 +4,9 @@
 	.alias audiomix_data $d6f5
 	.alias audioamp_ctl $d6fe
 
+	.alias sample_speed $c000
+	.alias sample_shift $c001
+	.alias sample_offset $c002
 
 ; Include C64 BASIC program load header
 
@@ -22,6 +25,15 @@ iter1:   .byte 0
 
 	 ; Disable interrupts
 	 sei
+
+	 ; Default to fastest sample rate
+	 lda #$ff
+	 sta sample_speed
+	 ; Default to shifting samples left 3 bits
+	 lda #$03
+	 sta sample_shift
+	 lda #$80
+	 sta sample_offset
 
 	lda #$47
 	sta $d02f
@@ -62,7 +74,73 @@ entry:
          ldx #0
 loop:
 
+	; some key presses do things
+	; a = reduce time between samples
+	; b = increase time between samples
+
 	lda $d610
+	cmp #$61
+	bne not_a
+
+	inc sample_speed
+	sta $d610
+	jmp loop
+not_a:
+	cmp #$62
+	bne not_b
+
+	dec sample_speed
+	sta $d610
+	jmp loop
+not_b:
+	cmp #$63
+	bne not_c
+
+	inc sample_shift
+	sta $d610
+	jmp loop
+not_c:
+	cmp #$64
+	bne not_d
+
+	dec sample_shift
+	sta $d610
+	jmp loop
+not_d:
+	cmp #$65
+	bne not_e
+
+	lda sample_offset
+	clc
+	adc #$10
+	sta sample_offset
+	sta $d610
+	jmp loop
+not_e:
+	cmp #$66
+	bne not_f
+
+	dec sample_offset
+	sec
+	sbc #$10
+	sta sample_offset
+
+	sta $d610
+	jmp loop
+not_f:
+	; P for pause
+	cmp #$70
+	bne not_p
+	sta $d610
+key_pause_loop:
+	lda $d610
+	cmp #$00
+	beq key_pause_loop
+	sta $d610
+	jmp loop
+not_p:
+	
+
 	ora $d611
 	bne inputeventdetected
 
@@ -127,19 +205,20 @@ drawloop:
 	dex
 	bne drawloop
 
-	; Then read 256 samples
-     ;	ldx #$00
-nextsample:
-	lda $d012
-wait:	cmp $d012
-	beq wait
 
 	; $0a - $0d = microphones 1 - 4
-
 	; select microphone 4 audio
         lda #$0d
         sta $d6f4
-        ; get msb of audio sample
+
+	; Then read 256 samples
+     ;	ldx #$00
+nextsample:
+;	lda $d012
+;wait:	cmp $d012
+;	beq wait
+
+        ; get msb and lsb of audio sample
 
 	; shift it left a few bits
         lda $d6fc
@@ -147,48 +226,60 @@ wait:	cmp $d012
 	sta samplelo	
 	sty samplehi
 
+	ldy sample_shift
+	beq sample_shift_done
+sample_shift_loop:
+	
 	asl samplelo
 	rol samplehi
 
-	asl samplelo
-	rol samplehi
-
-	asl samplelo
-	rol samplehi
+	dey
+	bne sample_shift_loop
+sample_shift_done:
 
         lda samplehi
 	clc
-	adc #$80
+	adc sample_offset
 	sta previoussamples2,x
 
-        ; select microphone 1 audio
-        lda #$0b
-        sta $d6f4
-
-	; shift it left a few bits
-        lda $d6fc
-	sta samplelo
-	lda $d6fd
-	sta samplehi
-
-	asl samplelo
-	rol samplehi
-
-	asl samplelo
-	rol samplehi
-
-	lda samplehi
-	clc
-	adc #$80
-
-	; XXX Ignofre sample for now
+;        ; select microphone 1 audio
+;        lda #$0b
+;        sta $d6f4
+;
+;	; shift it left a few bits
+;       lda $d6fc
+;	sta samplelo
+;	lda $d6fd
+;	sta samplehi
+;
+;	asl samplelo
+;	rol samplehi
+;
+;	asl samplelo
+;	rol samplehi
+;
+;	lda samplehi
+;	clc
+;	adc #$80
+;
+;	; XXX Ignofre sample for now
 	lda #$00
 
 	sta previoussamples,x
 
+	ldy sample_speed
+speed_loop:
+	iny
+	bne speed_loop
+	
+	inc $d020
+
 	inx
 	bne nextsample
-	
+
+	lda #$00
+	sta $d020
+
 	jmp loop
 
 plotpixel:
