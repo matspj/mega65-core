@@ -206,12 +206,12 @@ begin
         end if;
 
         -- LCD HSYNC is expected to be just before start of pixels, and is
-        -- always negative
+        -- always positive
         if x = hsync_start then
-          lcd_hsync <= '0';
+          lcd_hsync <= '1';
         end if;
         if x = hsync_end then
-          lcd_hsync <= '1';
+          lcd_hsync <= '0';
         end if;
         -- HSYNC is negative by default
         -- HDMI hsync
