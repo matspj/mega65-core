@@ -233,7 +233,7 @@ begin
 
                   x_zero_position => 864-45,
                   
-                  fullwidth_width => 720,
+                  fullwidth_width => 800,
                   fullwidth_start => 0,
 
                   narrow_width => 720,
@@ -290,7 +290,7 @@ begin
 
                   x_zero_position => 858-46,
 
-                  fullwidth_width => 720,
+                  fullwidth_width => 800,
                   fullwidth_start => 0,
 
                   narrow_width => 720,
