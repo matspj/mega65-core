@@ -386,27 +386,37 @@ begin
 
       -- The pixel for direct output to VGA pins
       -- It is clocked at the correct pixel
---      red_no => vgared,
---      green_no => vgagreen,
---      blue_no => vgablue,      
+      red_no(7 downto 4) => vga_red,
+      red_no(3 downto 0) => open,
+      green_no(7 downto 4) => vga_green,
+      green_no(3 downto 0) => open,
+      blue_no(7 downto 4) => vga_blue,      
+      blue_no(3 downto 0) => open,
 
-      red_o => lcd_red,
-      green_o => lcd_green,
-      blue_o => lec_blue,
+               red_o(7 downto 2) => lcd_red,
+               red_o(1 downto 0) => open,
+               green_o(7 downto 2) => lcd_green,
+               green_o(1 downto 0) => open,
+               blue_o(7 downto 2) => lcd_blue,
+               blue_o(1 downto 0) => open,
                
  --     hsync => hdmi_hsync,
- --     vsync => vsync,  -- for HDMI
- --     vga_hsync => vga_hsync,      -- for VGA          
+               --     vsync => vsync,  -- for HDMI
+               vsync => vga_vsync,             
+    vga_hsync => vga_hsync,      -- for VGA          
 
       -- And the variations on those signals for the LCD display
       lcd_hsync => lcd_hsync,               
       lcd_vsync => lcd_vsync,
+               
       fullwidth_dataenable => lcd_display_enable
 --      lcd_inletterbox => lcd_inletterbox,
 --      vga_inletterbox => vga_inletterbox
 
       );
 
+  lcd_dclk <= clock27;
+  
 
   -- XXX Ethernet should be 250Mbit fibre port on this board
   -- eth_clock <= cpuclock;
