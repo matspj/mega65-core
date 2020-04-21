@@ -1,26 +1,27 @@
 ----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date:    22:30:37 12/10/2013 
--- Design Name: 
--- Module Name:    container - Behavioral 
--- Project Name: 
--- Target Devices: 
--- Tool versions: 
--- Description: 
+-- Company:
+-- Engineer:
 --
--- Dependencies: 
+-- Create Date:    22:30:37 12/10/2013
+-- Design Name:
+-- Module Name:    container - Behavioral
+-- Project Name:
+-- Target Devices:
+-- Tool versions:
+-- Description:
 --
--- Revision: 
+-- Dependencies:
+--
+-- Revision:
 -- Revision 0.01 - File Created
--- Additional Comments: 
+-- Additional Comments:
 --
 ----------------------------------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use ieee.numeric_std.all;
 use Std.TextIO.all;
+use work.cputypes.all;
 
 
 -- Uncomment the following library declaration if using
@@ -29,57 +30,138 @@ use Std.TextIO.all;
 
 -- Uncomment the following library declaration if instantiating
 -- any Xilinx primitives in this code.
---library UNISIM;
---use UNISIM.VComponents.all;
+library UNISIM;
+use UNISIM.VComponents.all;
 
 entity container is
-  Port ( CLK_IN : STD_LOGIC;         
-         btnCpuReset : in  STD_LOGIC;
+  Port ( CLK_IN : STD_LOGIC;
+--         btnCpuReset : in  STD_LOGIC;
 --         irq : in  STD_LOGIC;
 --         nmi : in  STD_LOGIC;
-         
+
+         wifirx : out std_logic := '1';
+         wifitx : out std_logic := '1';
+
+         i2c1sda : inout std_logic;
+         i2c1scl : inout std_logic;
+
+         modem1_pcm_clk_in : in std_logic;
+         modem1_pcm_sync_in : in std_logic;
+         modem1_pcm_data_in : in std_logic;
+         modem1_pcm_data_out : out std_logic;
+--         modem1_uart2_rx : inout std_logic;
+--         modem1_uart2_tx : out std_logic;
+         modem1_uart_rx : inout std_logic;
+         modem1_uart_tx : out std_logic;
+
+         modem2_pcm_clk_in : in std_logic;
+         modem2_pcm_sync_in : in std_logic;
+         modem2_pcm_data_in : in std_logic;
+         modem2_pcm_data_out : out std_logic;
+--         modem2_uart2_rx : inout std_logic;
+--         modem2_uart2_tx : out std_logic;
+         modem2_uart_rx : inout std_logic;
+         modem2_uart_tx : out std_logic;
+
          ----------------------------------------------------------------------
-         -- CIA1 ports for keyboard/joystick 
+         -- MEMS microphones
+         ----------------------------------------------------------------------
+         micData0 : in std_logic;
+         micData1 : in std_logic;
+         micClk : out std_logic;
+
+         ----------------------------------------------------------------------
+         -- Touch screen interface
+         ----------------------------------------------------------------------
+         touch_sda : inout std_logic := '1';
+         touch_scl : inout std_logic := '1';
+
+         ----------------------------------------------------------------------
+         -- CIA1 ports for keyboard/joystick
          ----------------------------------------------------------------------
 --         porta_pins : inout  std_logic_vector(7 downto 0);
 --         portb_pins : inout  std_logic_vector(7 downto 0);
-         
+
          ----------------------------------------------------------------------
          -- VGA output
          ----------------------------------------------------------------------
-         vsync : out STD_LOGIC;
-         hsync : out  STD_LOGIC;
-         vgared : buffer  UNSIGNED (3 downto 0);
-         vgagreen : buffer  UNSIGNED (3 downto 0);
-         vgablue : buffer  UNSIGNED (3 downto 0);
+         vga_vsync : out STD_LOGIC;
+         vga_hsync : out  STD_LOGIC;
+         vga_red : out  UNSIGNED (3 downto 0);
+         vga_green : out  UNSIGNED (3 downto 0);
+         vga_blue : out  UNSIGNED (3 downto 0);
 
          ----------------------------------------------------------------------
-         -- PS/2 keyboard interface
+         -- LCD output
          ----------------------------------------------------------------------
-         ps2clk : in std_logic;
-         ps2data : in std_logic;
+         lcd_vsync : out STD_LOGIC;
+         lcd_hsync : out  STD_LOGIC;
+         lcd_display_enable : out std_logic;
+         lcd_pwm : out std_logic;
+         lcd_dclk : out std_logic;
+         lcd_red : out  UNSIGNED (5 downto 0);
+         lcd_green : out  UNSIGNED (5 downto 0);
+         lcd_blue : out  UNSIGNED (5 downto 0);
 
-         jblo : inout std_logic_vector(4 downto 1) := (others => 'Z');
-         jbhi : inout std_logic_vector(10 downto 7) := (others => 'Z');
-         jalo : inout std_logic_vector(4 downto 1) := (others => 'Z');
-         jahi : inout std_logic_vector(10 downto 7) := (others => 'Z');
-         jdlo : inout std_logic_vector(4 downto 1) := (others => 'Z');
-         jdhi : inout std_logic_vector(10 downto 7) := (others => 'Z');
-         jclo : inout std_logic_vector(4 downto 1) := (others => 'Z');
-         jchi : inout std_logic_vector(10 downto 7) := (others => 'Z');
-         
          ----------------------------------------------------------------------
-         -- Debug interfaces on Nexys4 board
+         -- HyperRAM as expansion RAM
          ----------------------------------------------------------------------
-         led : out std_logic_vector(15 downto 0) := (others => '1');
-         sw : in std_logic_vector(15 downto 0);
-         btn : in std_logic_vector(4 downto 0);
+         hr_d : inout unsigned(7 downto 0);
+         hr_rwds : inout std_logic;
+         hr_reset : out std_logic;
+         hr_rsto : out std_logic := '1';
+         hr_clk_n : out std_logic;
+         hr_clk_p : out std_logic;
+         hr_cs0 : out std_logic;
+--         hr_cs1 : out std_logic := '1';
 
-         UART_TXD : out std_logic := '1';
-         RsRx : in std_logic;
-         
-         sseg_ca : out std_logic_vector(7 downto 0) := x"00";
-         sseg_an : out std_logic_vector(7 downto 0) := x"00"
+         -------------------------------------------------------------------------
+         -- Lines for the SDcard interface itself
+         -------------------------------------------------------------------------
+         sdReset : out std_logic := '0';  -- must be 0 to power SD controller (cs_bo)
+         sdClock : out std_logic := 'Z';       -- (sclk_o)
+         sdMOSI : out std_logic := 'Z';
+         sdMISO : in  std_logic;
+
+         ----------------------------------------------------------------------
+         -- Allow the FPGA to turn itself off
+         ----------------------------------------------------------------------
+         power_down : out std_logic := '1';
+
+         ----------------------------------------------------------------------
+         -- Flash RAM for holding config
+         ----------------------------------------------------------------------
+--         QspiSCK : out std_logic;
+         QspiDB : inout unsigned(3 downto 0) := (others => 'Z');
+         QspiCSn : out std_logic;
+
+         ----------------------------------------------------------------------
+         -- Analog headphone jack output
+         -- (amplifier enable is on an IO expander)
+         ----------------------------------------------------------------------
+         headphone_left : out std_logic;
+         headphone_right : out std_logic;
+
+         ----------------------------------------------------------------------
+         -- I2S speaker audio output
+         ----------------------------------------------------------------------
+         i2s_mclk : out std_logic;
+         i2s_sync : out std_logic;
+         i2s_speaker : out std_logic;
+         i2s_bclk : out std_logic := '1'; -- Force 16 cycles per sample,
+                                          -- instead of 32
+
+         ----------------------------------------------------------------------
+         -- Debug interfaces on TE0725
+         ----------------------------------------------------------------------
+         led : out std_logic;
+
+         ----------------------------------------------------------------------
+         -- UART monitor interface
+         ----------------------------------------------------------------------
+         monitor_tx : out std_logic;
+         monitor_rx : in std_logic
+
          );
 end container;
 
@@ -91,265 +173,242 @@ architecture Behavioral of container is
            rst : in  STD_LOGIC;
            temp : out  STD_LOGIC_VECTOR (11 downto 0));
   end component;
-  
+
+  signal irq : std_logic := '1';
+  signal nmi : std_logic := '1';
+  signal restore_key : std_logic := '1';
+  signal osk_toggle_key : std_logic := '1';
+  signal joyswap_key : std_logic := '1';
+  signal reset_out : std_logic := '1';
+  signal cpu_game : std_logic := '1';
+  signal cpu_exrom : std_logic := '1';
+
+  signal buffer_vgared : unsigned(7 downto 0);
+  signal buffer_vgagreen : unsigned(7 downto 0);
+  signal buffer_vgablue : unsigned(7 downto 0);
+
   signal pixelclock : std_logic;
   signal cpuclock : std_logic;
-  signal clock200 : std_logic;
-  signal clock40 : std_logic;
-  signal clock33 : std_logic;
-  signal clock30 : std_logic;
+  signal ethclock : std_logic;
+  signal clock41 : std_logic;
+  signal clock27 : std_logic;
+  signal clock81 : std_logic;
+  signal clock120 : std_logic;
+  signal clock100 : std_logic;
+  signal clock162 : std_logic;
+  signal clock325 : std_logic;
 
-  signal hsync_i : std_logic := '0';
-  signal vsync_i : std_logic := '0';
-  signal hsync_o : std_logic := '0';
-  signal vsync_o : std_logic := '0';
-  signal oof_i : std_logic := '0';
-  signal oof_o : std_logic := '0';
-  
   signal segled_counter : unsigned(31 downto 0) := (others => '0');
 
-  signal lcd_clk_i : std_logic;
-  signal lcd_clk_o : std_logic;
-  signal lcd_hsync_i : std_logic;
-  signal lcd_hsync : std_logic;
-  signal lcd_vsync_i : std_logic;
-  signal lcd_vsync : std_logic;
-  signal lcd_de_i : std_logic;
-  signal lcd_de_o : std_logic;
-  signal lcd_pwm : std_logic;
+  signal slow_access_request_toggle : std_logic;
+  signal slow_access_ready_toggle : std_logic;
+  signal slow_access_write : std_logic;
+  signal slow_access_address : unsigned(27 downto 0);
+  signal slow_access_wdata : unsigned(7 downto 0);
+  signal slow_access_rdata : unsigned(7 downto 0);
 
-  signal hsync_pal50 : std_logic;
-  signal vsync_pal50 : std_logic;
-  signal inframe_pal50 : std_logic;
-  signal lcd_vsync_pal50 : std_logic;
-  signal lcd_inframe_pal50 : std_logic;
+  signal sector_buffer_mapped : std_logic;
 
-  signal hsync_ntsc60 : std_logic;
-  signal vsync_ntsc60 : std_logic;
-  signal inframe_ntsc60 : std_logic;  
-  signal lcd_vsync_ntsc60 : std_logic;
-  signal lcd_inframe_ntsc60 : std_logic;  
-  
-  signal red_i : unsigned(7 downto 0);
-  signal green_i : unsigned(7 downto 0);
-  signal blue_i : unsigned(7 downto 0);
 
-  signal red_n : unsigned(7 downto 0);
-  signal green_n : unsigned(7 downto 0);
-  signal blue_n : unsigned(7 downto 0);
+  signal vgaredignore : unsigned(3 downto 0);
+  signal vgagreenignore : unsigned(3 downto 0);
+  signal vgablueignore : unsigned(3 downto 0);
 
-  signal red_p : unsigned(7 downto 0);
-  signal green_p : unsigned(7 downto 0);
-  signal blue_p : unsigned(7 downto 0);
-  
-  signal red_o : unsigned(7 downto 0);
-  signal green_o : unsigned(7 downto 0);
-  signal blue_o : unsigned(7 downto 0);
+  signal porta_pins : std_logic_vector(7 downto 0) := (others => '1');
+  signal portb_pins : std_logic_vector(7 downto 0) := (others => '1');
 
-  signal pwm_brightness : unsigned(7 downto 0) := x"FF";
-  signal pwm_comparison : unsigned(7 downto 0) := x"FF";
-  signal pwm_divisor_counter : integer := 0;
-  -- 1KHz * 256 values of brightness
-  constant pwm_divisor : integer := 100000000 / (1000 * 256);
+  signal cart_ctrl_dir : std_logic := 'Z';
+  signal cart_haddr_dir : std_logic := 'Z';
+  signal cart_laddr_dir : std_logic := 'Z';
+  signal cart_data_dir : std_logic := 'Z';
+  signal cart_phi2 : std_logic := 'Z';
+  signal cart_dotclock : std_logic := 'Z';
+  signal cart_reset : std_logic := 'Z';
 
-  signal x_zero50 : std_logic := '0';
-  signal last_x_zero50 : std_logic := '0';
-  signal x_counter : integer := 0;
-  signal x_counter_max : integer := 0;
-  signal pix100 : std_logic_vector(2 downto 0) := "000";
+  signal cart_nmi : std_logic := 'Z';
+  signal cart_irq : std_logic := 'Z';
+  signal cart_dma : std_logic := 'Z';
+
+  signal cart_exrom : std_logic := 'Z';
+  signal cart_ba : std_logic := 'Z';
+  signal cart_rw : std_logic := 'Z';
+  signal cart_roml : std_logic := 'Z';
+  signal cart_romh : std_logic := 'Z';
+  signal cart_io1 : std_logic := 'Z';
+  signal cart_game : std_logic := 'Z';
+  signal cart_io2 : std_logic := 'Z';
+
+  signal cart_d : unsigned(7 downto 0) := (others => 'Z');
+  signal cart_d_read : unsigned(7 downto 0) := (others => 'Z');
+  signal cart_a : unsigned(15 downto 0) := (others => 'Z');
+
+  ----------------------------------------------------------------------
+  -- CBM floppy serial port
+  ----------------------------------------------------------------------
+  signal iec_clk_en : std_logic := 'Z';
+  signal iec_data_en : std_logic := 'Z';
+  signal iec_data_o : std_logic := 'Z';
+  signal iec_reset : std_logic := 'Z';
+  signal iec_clk_o : std_logic := 'Z';
+  signal iec_data_i : std_logic := '1';
+  signal iec_clk_i : std_logic := '1';
+  signal iec_atn : std_logic := 'Z';
+
+
+  -- XXX We should read the real temperature and feed this to the DDR controller
+  -- so that it can update timing whenever the temperature changes too much.
+  signal fpga_temperature : std_logic_vector(11 downto 0) := (others => '0');
+
+  signal dummy : std_logic_vector(2 downto 0);
+  signal sawtooth_phase : integer := 0;
+  signal sawtooth_counter : integer := 0;
+  signal sawtooth_level : integer := 0;
+
+  signal pal50_select : std_logic;
+
+  -- Dummy signals for stub / not yet implemented interfaces
+  signal eth_mdio : std_logic := '0';
+  signal c65uart_rx : std_logic := '1';
+
+  signal pin_number : integer;
+
+  signal expansionram_read : std_logic;
+  signal expansionram_write : std_logic;
+  signal expansionram_rdata : unsigned(7 downto 0);
+  signal expansionram_wdata : unsigned(7 downto 0);
+  signal expansionram_address : unsigned(26 downto 0);
+  signal expansionram_data_ready_strobe : std_logic;
+  signal expansionram_busy : std_logic;
+
+  signal dummypins : std_logic_vector(1 to 100) := (others => '0');
+
+  signal i2c_joya_fire : std_logic;
+  signal i2c_joya_left : std_logic;
+  signal i2c_joya_right : std_logic;
+  signal i2c_joya_up : std_logic;
+  signal i2c_joya_down : std_logic;
+  signal i2c_joyb_fire : std_logic;
+  signal i2c_joyb_left : std_logic;
+  signal i2c_joyb_right : std_logic;
+  signal i2c_joyb_up : std_logic;
+  signal i2c_joyb_down : std_logic;
+
+  signal i2c_button2 : std_logic;
+  signal i2c_button3 : std_logic;
+  signal i2c_button4 : std_logic;
+  signal i2c_black2 : std_logic;
+  signal i2c_black3 : std_logic;
+  signal i2c_black4 : std_logic;
+
+  signal widget_matrix_col : std_logic_vector(7 downto 0) := (others => '1');
+
+  signal qspi_clock : std_logic;
+
+  signal current_cache_line : cache_row_t := (others => (others => '0'));
+  signal current_cache_line_address : unsigned(26 downto 3) := (others => '0');
+  signal current_cache_line_valid : std_logic := '0';
   
 begin
 
+--STARTUPE2:STARTUPBlock--7Series
+
+--XilinxHDLLibrariesGuide,version2012.4
+  STARTUPE2_inst: STARTUPE2
+    generic map(PROG_USR=>"FALSE", --Activate program event security feature.
+                                   --Requires encrypted bitstreams.
+  SIM_CCLK_FREQ=>10.0 --Set the Configuration Clock Frequency(ns) for simulation.
+    )
+    port map(
+--      CFGCLK=>CFGCLK,--1-bit output: Configuration main clock output
+--      CFGMCLK=>CFGMCLK,--1-bit output: Configuration internal oscillator
+                              --clock output
+--             EOS=>EOS,--1-bit output: Active high output signal indicating the
+                      --End Of Startup.
+--             PREQ=>PREQ,--1-bit output: PROGRAM request to fabric output
+             CLK=>'0',--1-bit input: User start-up clock input
+             GSR=>'0',--1-bit input: Global Set/Reset input (GSR cannot be used
+                      --for the port name)
+             GTS=>'0',--1-bit input: Global 3-state input (GTS cannot be used
+                      --for the port name)
+             KEYCLEARB=>'0',--1-bit input: Clear AES Decrypter Key input
+                                  --from Battery-Backed RAM (BBRAM)
+             PACK=>'0',--1-bit input: PROGRAM acknowledge input
+
+             -- Put CPU clock out on the QSPI CLOCK pin
+             USRCCLKO=>qspi_clock,--1-bit input: User CCLK input
+             USRCCLKTS=>'0',--1-bit input: User CCLK 3-state enable input
+
+             -- Assert DONE pin
+             USRDONEO=>'1',--1-bit input: User DONE pin output control
+             USRDONETS=>'1' --1-bit input: User DONE 3-state enable output
+             );
+-- End of STARTUPE2_inst instantiation
+
+  
   dotclock1: entity work.dotclock100
     port map ( clk_in1 => CLK_IN,
-               clock100 => pixelclock, -- 100MHz
-               clock50 => cpuclock, -- 50MHz
-               clock40 => clock40,
-               clock33 => clock33,
-               clock30 => clock30,
-               clock200 => clock200
+               clock100 => clock100,
+               clock81 => pixelclock, -- 80MHz
+               clock41 => cpuclock, -- 40MHz
+               clock50 => ethclock,
+               clock162 => clock162,
+               clock27 => clock27,
+               clock325 => clock325
                );
 
-  frame50: entity work.frame_generator
-    generic map ( frame_width => 960,
-                  display_width => 800,
-                  frame_height => 625,
-                  display_height => 600,
-                  vsync_start => 620,
-                  vsync_end => 625,
-                  hsync_start => 814,
-                  hsync_end => 884
-                  )                  
-    port map ( clock => clock30,
-               hsync => hsync_pal50,
-               vsync => vsync_pal50,
-               inframe => inframe_pal50,
-               x_zero => x_zero50,
-               lcd_vsync => lcd_vsync_pal50,
-               lcd_inframe => lcd_inframe_pal50,
 
-               -- Get test pattern
-               red_o => red_p,
-               green_o => green_p,
-               blue_o => blue_p
-               );
-
-  frame60: entity work.frame_generator
-    generic map ( frame_width => 1056,
-                  display_width => 800,
-                  frame_height => 628,
-                  display_height => 600,
-                  vsync_start => 624,
-                  vsync_end => 628,
-                  hsync_start => 840,
-                  hsync_end => 968
-                  )                  
-    port map ( clock => clock40,
-               hsync => hsync_ntsc60,
-               vsync => vsync_ntsc60,
-               inframe => inframe_ntsc60,
-               lcd_vsync => lcd_vsync_ntsc60,
-               lcd_inframe => lcd_inframe_ntsc60,
-
-               -- Get test pattern
-               red_o => red_n,
-               green_o => green_n,
-               blue_o => blue_n
-               );               
-  
   pixel0: entity work.pixel_driver
     port map (
-      pixelclock_select => sw(7 downto 0),
+               clock81 => pixelclock, -- 80MHz
+               clock162 => clock162,
+               clock27 => clock27,
+               cpuclock => cpuclock,
+--               phi_out => phi,
+
+--      pixel_strobe_out => external_pixel_strobe,
       
-      clock200 => clock200,
-      clock100 => pixelclock,
-      clock50 => cpuclock,
-      clock40 => clock40,
-      clock33 => clock33,
-      clock30 => clock30,
-
-      red_i => red_i,
-      green_i => green_i,
-      blue_i => blue_i,
-
-      red_o => red_o,
-      green_o => green_o,
-      blue_o => blue_o,
-
-      hsync_i => hsync_i,
-      hsync_o => hsync_o,
-      vsync_i => vsync_i,
-      vsync_o => vsync_o,
-
-      lcd_hsync_i => lcd_hsync_i,
-      lcd_hsync_o => lcd_hsync,
-      lcd_vsync_i => lcd_vsync_i,
-      lcd_vsync_o => lcd_vsync,
-
-      viciv_outofframe_i => oof_i,
-      viciv_outofframe_o => oof_o,
+      -- Configuration information from the VIC-IV
+      hsync_invert => '0',
+      vsync_invert => '0',
+               pal50_select => '0',
+               vga60_select => '0',
+      test_pattern_enable => '1',
       
-      lcd_display_enable_i => lcd_de_i,
-      lcd_display_enable_o => lcd_de_o,
+      -- Framing information for VIC-IV
+--      x_zero => external_frame_x_zero,     
+--      y_zero => external_frame_y_zero,     
 
-      lcd_pixel_strobe_i => lcd_clk_i,
-      lcd_pixel_strobe_o => lcd_clk_o
+      -- Pixel data from the video pipeline
+      -- (clocked at 100MHz pixel clock)
+      red_i => (others => '1'),
+      green_i => (others => '1'),
+      blue_i => (others => '1'),
+
+      -- The pixel for direct output to VGA pins
+      -- It is clocked at the correct pixel
+--      red_no => vgared,
+--      green_no => vgagreen,
+--      blue_no => vgablue,      
+
+      red_o => lcd_red,
+      green_o => lcd_green,
+      blue_o => lec_blue,
+               
+ --     hsync => hdmi_hsync,
+ --     vsync => vsync,  -- for HDMI
+ --     vga_hsync => vga_hsync,      -- for VGA          
+
+      -- And the variations on those signals for the LCD display
+      lcd_hsync => lcd_hsync,               
+      lcd_vsync => lcd_vsync,
+      fullwidth_dataenable => lcd_display_enable
+--      lcd_inletterbox => lcd_inletterbox,
+--      vga_inletterbox => vga_inletterbox
 
       );
 
-  process (sw(14), pix100, red_o, green_o, blue_o) is
-  begin
-    if sw(14)='0' then
-      vgared <= red_o(7 downto 4);
-      vgagreen <= green_o(7 downto 4);
-      vgablue <= blue_o(7 downto 4);
-      jalo <= std_logic_vector(blue_o(7 downto 4));
-      jahi <= std_logic_vector(red_o(7 downto 4));
-      jblo <= std_logic_vector(green_o(7 downto 4));
-    else
-      for i in 0 to 3 loop
-        vgared(i) <= pix100(2);
-        vgagreen(i) <= pix100(2);
-        vgablue(i) <= pix100(2);
-        jalo <= pix100(2) &pix100(2) &pix100(2) &pix100(2);
-        jahi <= pix100(2) &pix100(2) &pix100(2) &pix100(2);
-        jblo <= pix100(2) &pix100(2) &pix100(2) &pix100(2);
-      end loop;
-    end if;
-  end process;
-  
-  hsync <= hsync_o;
-  vsync <= vsync_o;
-  
-  jbhi(7) <= lcd_clk_o;
-  jbhi(8) <= lcd_hsync;
-  jbhi(9) <= lcd_vsync;
-  jbhi(10) <= lcd_de_o;
-  jclo(1) <= lcd_pwm;
 
-  process (pixelclock)
-  begin
-    if rising_edge (pixelclock) then
-      last_x_zero50 <= x_zero50;
-      if x_zero50 = '1' and last_x_zero50 = '0' then
-        x_counter_max <= 1;
-        x_counter <= 0;
-      else
-        if x_counter = x_counter_max then
-          x_counter_max <= x_counter_max + 1;
-          x_counter <= 0;
-          pix100 <= "111";
-        else
-          x_counter <= x_counter + 1;
-          pix100(2 downto 1) <= pix100(1 downto 0);
-          pix100(0) <= '0';
-        end if;
-      end if;
-    end if;
-  end process;
-  
-  process (cpuclock)
-  begin
+  -- XXX Ethernet should be 250Mbit fibre port on this board
+  -- eth_clock <= cpuclock;
 
-    if sw(15)='1' then
-      hsync_i <= hsync_pal50;
-      vsync_i <= not vsync_pal50;
-      lcd_hsync_i <= hsync_pal50;
-      lcd_vsync_i <= not lcd_vsync_pal50;
-      lcd_de_i <= lcd_inframe_pal50;
-      lcd_clk_i <= clock30;
-      red_i <= red_p;
-      green_i <= green_p;
-      blue_i <= blue_p;
-    else
-      hsync_i <= hsync_ntsc60;
-      vsync_i <= vsync_ntsc60;
-      lcd_hsync_i <= hsync_ntsc60;
-      lcd_vsync_i <= lcd_vsync_ntsc60;
-      lcd_de_i <= lcd_inframe_ntsc60;
-      lcd_clk_i <= clock40;
-      red_i <= red_n;
-      green_i <= green_n;
-      blue_i <= blue_n;
-    end if;
-    
-    if rising_edge(cpuclock) then
-      pwm_brightness <= unsigned(sw(12 downto 5));
-      if pwm_divisor_counter < pwm_divisor then
-        pwm_divisor_counter <= pwm_divisor_counter + 1;
-      else
-        pwm_divisor_counter <= 0;
-        if pwm_comparison /= x"FF" then
-          pwm_comparison <= pwm_comparison + 1;
-          if pwm_comparison = pwm_brightness then
-            lcd_pwm <= '0';
-          end if;
-        else
-          pwm_comparison <= x"00";
-          lcd_pwm <= '1';
-        end if;
-      end if;
-    end if;
-  end process;
-      
 end Behavioral;
