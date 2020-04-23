@@ -1875,9 +1875,33 @@ int main(int argc,char **argv)
     }
   }  
 
-  // Detect only A7100T parts
+  // Detect only A100T parts
   // XXX Will require patching for MEGA65 R1 PCBs, as they have an A200T part.
-  init_fpgajtag(serial_port, bitstream, 0x3631093); // 0xffffffff);
+  // XXX and Numato Mimas A7 boards with the A50T part
+  // We SHOULD instead be getting the code from the bitstream and checking against that.
+  int part_id=0xffffffff;
+  if (bitstream) {
+    FILE *f=fopen(bitstream,"r");
+    unsigned char buffer[1024];
+    bzero(buffer,1024);
+    if (f) {fread(buffer,1024,1,f);
+      fclose(f);
+    }
+    for(int i=0;i<(1024-8);i++) {
+      if ((buffer[i+0]==0x30)&&
+	  (buffer[i+1]==0x01)&&
+	  (buffer[i+2]==0x80)&&
+	  (buffer[i+3]==0x01)) {
+	part_id=
+	  (buffer[i+4]<<24)+
+	  (buffer[i+5]<<16)+
+	  (buffer[i+6]<<8)+
+	  (buffer[i+7]<<0);
+	fprintf(stderr,"Bitstream expects FPGA model %x\n",part_id);
+      }
+    }
+  }
+  init_fpgajtag(serial_port, bitstream, part_id);
 
   if (boundary_scan) {
     // Launch boundary scan in a separate thread, so that we can monitor signals while
