@@ -394,7 +394,7 @@ static void init_device(int extra)
     else
       write_item(DITEM(SET_BITS_LOW, 0xe8, 0xeb, SET_BITS_HIGH, 0x20, 0x30));
     if (extra)
-        write_item(DITEM(SET_BITS_HIGH, 0x30, 0x00, SET_BITS_HIGH, 0x00, 0x00));
+      write_item(DITEM(SET_BITS_HIGH, 0x30, 0x00, SET_BITS_HIGH, 0x00, 0x00));
     LOGNOTE("For TAP to reset state.");
     write_tms_transition("XR11111");       /*** Force TAP controller to Reset state ***/
     EXIT();
@@ -662,7 +662,7 @@ void init_fpgajtag(const char *serialno, const char *filename, uint32_t file_idc
     for (i = 0; i < sizeof(bitswap); i++)
         bitswap[i] = BSWAP(i);
     uinfo = fpgausb_init();   /*** Initialize USB interface ***/
-    fprintf(stderr,"is_mimasa7=%d, interface=%d\n",is_mimasa7,interface);
+    
     int usb_index = 0;
     for (i = 0; uinfo[i].dev; i++) {
         fprintf(stderr, "fpgajtag: %s:%s:%s; bcd:%x", uinfo[i].iManufacturer,
@@ -682,6 +682,7 @@ void init_fpgajtag(const char *serialno, const char *filename, uint32_t file_idc
         }
         fprintf(stderr, "\n");
     }
+    
     //    if (!filename)
     //        exit(1);
     while (1) {
@@ -696,7 +697,7 @@ void init_fpgajtag(const char *serialno, const char *filename, uint32_t file_idc
 	    // Found the correct interface.
 	    // Now extract the real serial port name as well, so that monitor_load can use it.
 
-#if 0
+#if 1
 	    fprintf(stderr,"USB device info: dev=%p, idVendor=%x, idProduct=%x, bcdDevice=%x(0d%d)\n",
 		    uinfo[usb_index].dev,
 		    uinfo[usb_index].idVendor,
@@ -710,7 +711,7 @@ void init_fpgajtag(const char *serialno, const char *filename, uint32_t file_idc
 #endif
 	    int bus=libusb_get_bus_number(uinfo[usb_index].dev);
 	    int port=libusb_get_port_number(uinfo[usb_index].dev);
-	    
+
 	    // Iterate through /sys/bus/usb-serial/devices to see if any of the entries there have
 	    // symlinks that make sense for this device bus and port number.
 	    {
@@ -725,7 +726,7 @@ void init_fpgajtag(const char *serialno, const char *filename, uint32_t file_idc
 		  link[len]=0;
 		  // fprintf(stderr,"  Checking '%s' -> '%s'\n",path,link);
 		  char match[1024];
-		  snprintf(match,1024,"/%d-%d/%d-%d:1.1",bus,port,bus,port);
+		  snprintf(match,1024,"/%d-%d/%d-%d:1.0",bus,port,bus,port,1-interface);
 		  if (strstr(link,match)) {
 		    char serial_path[1024];
 		    snprintf(serial_path,1024,"/dev/%s",de->d_name);
@@ -756,7 +757,6 @@ void init_fpgajtag(const char *serialno, const char *filename, uint32_t file_idc
 	  }
         usb_index++;
     }
-
     if (jtag_index == -1) {
         printf("[%s] id %x from file does not match actual id %x\n", __FUNCTION__, file_idcode, idcode_array[0]);
         exit(-1);
