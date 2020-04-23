@@ -52,6 +52,7 @@ extern int trace;
 extern uint8_t *input_fileptr;
 extern int input_filesize;
 extern struct ftdi_context *global_ftdi;
+extern int is_mimasa7, interface;
 
 void memdump(const uint8_t *p, int len, char *title);
 

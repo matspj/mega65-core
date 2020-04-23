@@ -54,7 +54,6 @@
 #define LOGNOTE(M)
 #endif  
 
-
 #define FILE_READSIZE          6464
 #define MAX_SINGLE_USB_DATA    4046
 #define IDCODE_ARRAY_SIZE        20
@@ -66,7 +65,10 @@ uint8_t *input_fileptr;
 int input_filesize, found_cortex = -1, jtag_index = -1, dcount, idcode_count;
 int tracep ;//= 1;
 
-static int debug, verbose, skip_idcode, match_any_idcode, trailing_len, first_time_idcode_read = 1, dc2trail, interface;
+// Used for switching modes and bit flags for the Numato Mimas A7 board
+int is_mimasa7 = 0, interface = 0;
+
+static int debug, verbose, skip_idcode, match_any_idcode, trailing_len, first_time_idcode_read = 1, dc2trail;
 static USB_INFO *uinfo;
 static uint32_t idcode_array[IDCODE_ARRAY_SIZE], idcode_len[IDCODE_ARRAY_SIZE];
 static uint8_t *rstatus = DITEM(CONFIG_DUMMY, CONFIG_SYNC, CONFIG_TYPE2(0),
@@ -387,7 +389,10 @@ static void init_device(int extra)
     write_item(DITEM(LOOPBACK_END, DIS_DIV_5));
     LOGNOTE("Set clock divisor");
     set_clock_divisor();
-    write_item(DITEM(SET_BITS_LOW, 0xe8, 0xeb, SET_BITS_HIGH, 0x20, 0x30));
+    if (is_mimasa7)
+      write_item(DITEM(SET_BITS_LOW, 0x08, 0x4b, SET_BITS_HIGH, 0x20, 0x30));
+    else
+      write_item(DITEM(SET_BITS_LOW, 0xe8, 0xeb, SET_BITS_HIGH, 0x20, 0x30));
     if (extra)
         write_item(DITEM(SET_BITS_HIGH, 0x30, 0x00, SET_BITS_HIGH, 0x00, 0x00));
     LOGNOTE("For TAP to reset state.");
@@ -657,6 +662,7 @@ void init_fpgajtag(const char *serialno, const char *filename, uint32_t file_idc
     for (i = 0; i < sizeof(bitswap); i++)
         bitswap[i] = BSWAP(i);
     uinfo = fpgausb_init();   /*** Initialize USB interface ***/
+    fprintf(stderr,"is_mimasa7=%d, interface=%d\n",is_mimasa7,interface);
     int usb_index = 0;
     for (i = 0; uinfo[i].dev; i++) {
         fprintf(stderr, "fpgajtag: %s:%s:%s; bcd:%x", uinfo[i].iManufacturer,

@@ -375,6 +375,13 @@ USB_INFO *fpgausb_init(void)
             usbinfo_array[usbinfo_array_index].bcdDevice = desc.bcdDevice;
             usbinfo_array[usbinfo_array_index].bNumConfigurations = desc.bNumConfigurations;
 	    errno=0;
+
+	    if ( desc.idVendor == 0x2a19 && (desc.idProduct == 0x1009 )) {
+	      is_mimasa7 = 1;
+	      interface = 1;
+	      fprintf(stderr,"Detected Numato Mimas A7 board -- selecting alternate FT2232H config.\n");
+	     }
+	    
             if (libusb_open(dev, &usbhandle) < 0
              || UDESC(iManufacturer) < 0 || UDESC(iProduct) < 0 || UDESC(iSerialNumber) < 0) {
 	      printf("Error getting USB device attributes for device %04x:%04x\n",
