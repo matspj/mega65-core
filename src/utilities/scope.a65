@@ -220,22 +220,39 @@ drawloop:
 peakwait:
 
 	; Get 8 low bytes of samples in a row
-     ldy #7
-w9:     lda $d6fc
+     ldy #0
+     lda $d6fc
+w9:
+     cmp $d6fc
+     beq w9
+     sec
+     sbc $d6fc
      sta $a008,y
-     dey
-     bpl w9
+     iny
+     cpy #$10
+     bne w9
 
      ; Check if they are descending followed by ascending
-     lda $a008
-     sec
-     sbc $a00c
-     bpl peakwait
-     lda $a00c
-     sec
-     sbc $a00f
-     bmi peakwait
+     ldy #3
+     lda #0
+ w10:
+     ora $a008,y
+     dey
+     bpl w10
+     sta $a020
 
+     ldy #3
+     lda #$80
+ w11:
+     and $a00c,y
+     dey
+     bpl w11
+     sta $a021
+
+     lda $a020
+     bmi peakwait
+     lda $a021
+     bpl peakwait
 
      lda #$01
      sta $d020
