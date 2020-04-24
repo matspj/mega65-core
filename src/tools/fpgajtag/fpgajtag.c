@@ -97,6 +97,7 @@ static void pulse_gpio(int adelay)
 #define GPIO_DONE            0x10
 #define GPIO_01              0x01
 #define SET_LSB_DIRECTION(A) SET_BITS_LOW, 0xe0, (0xea | (A))
+#define SET_LSB_DIRECTION_MIMAS(A) SET_BITS_LOW, 0x40, (0x4a | (A))
 
     ENTER_TMS_STATE('I');
     switch (adelay) {
@@ -106,6 +107,9 @@ static void pulse_gpio(int adelay)
            printf("pulse_gpio: unsupported time delay %d\n", adelay);
            exit(-1);
     }
+    if (is_mimasa7)
+      write_item(DITEM(SET_LSB_DIRECTION_MIMAS(GPIO_DONE | GPIO_01),
+		       SET_LSB_DIRECTION_MIMAS(GPIO_DONE)));
     write_item(DITEM(SET_LSB_DIRECTION(GPIO_DONE | GPIO_01),
                      SET_LSB_DIRECTION(GPIO_DONE)));
     while(delay > 65536) {
@@ -113,8 +117,12 @@ static void pulse_gpio(int adelay)
         delay -= 65536;
     }
     write_item(DITEM(CLK_BYTES, INT16(delay-1)));
-    flush_write(DITEM(SET_LSB_DIRECTION(GPIO_DONE | GPIO_01),
-                     SET_LSB_DIRECTION(GPIO_01)));
+    if (is_mimasa7)
+      flush_write(DITEM(SET_LSB_DIRECTION_MIMAS(GPIO_DONE | GPIO_01),
+			SET_LSB_DIRECTION_MIMAS(GPIO_01)));
+    else
+      flush_write(DITEM(SET_LSB_DIRECTION(GPIO_DONE | GPIO_01),
+			SET_LSB_DIRECTION(GPIO_01)));
 }
 static void set_clock_divisor(void)
 {
@@ -697,7 +705,7 @@ void init_fpgajtag(const char *serialno, const char *filename, uint32_t file_idc
 	    // Found the correct interface.
 	    // Now extract the real serial port name as well, so that monitor_load can use it.
 
-#if 1
+#if 0
 	    fprintf(stderr,"USB device info: dev=%p, idVendor=%x, idProduct=%x, bcdDevice=%x(0d%d)\n",
 		    uinfo[usb_index].dev,
 		    uinfo[usb_index].idVendor,
@@ -920,7 +928,7 @@ printf("count %d/%d cortex %d dcount %d trail %d\n", jtag_index, idcode_count, f
     write_cirreg(0, IRREG_JSTART);
     tmsw_delay(14, 1);
     if ((ret = write_cirreg(DREAD, IRREG_BYPASS)) != FINISHED)
-        printf("[%s:%d] mismatch %x\n", __FUNCTION__, __LINE__, ret);
+      printf("[%s:%d] mismatch %x, expected %x\n", __FUNCTION__, __LINE__, ret, FINISHED);
     if ((ret = read_config_reg(CONFIG_REG_STAT)) !=
             (found_cortex != -1 ? 0xf87f1046 : 0xfc791040))
         if (verbose)
