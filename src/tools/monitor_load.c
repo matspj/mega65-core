@@ -746,7 +746,7 @@ int process_line(char *line,int live)
       if (charromfile) load_file(charromfile,0xFF7E000,0);
       if (colourramfile) load_file(colourramfile,0xFF80000,0);
       if (virtual_f011) {
-	char cmd[64];
+	char cmd[1024];
 	fprintf(stderr,"[T+%lldsec] Virtualising F011 FDC access.\n",
 		(long long)time(0)-start_time);
 	// Enable FDC virtualisation
@@ -1248,7 +1248,7 @@ int process_line(char *line,int live)
 	fprintf(stderr,"Could not find file '%s'\n",filename);
 	exit(-1);
       } else {
-	char cmd[64];
+	char cmd[1024];
 	int load_addr=fgetc(f);
 	load_addr|=fgetc(f)<<8;
 	if (!comma_eight_comma_one) {
