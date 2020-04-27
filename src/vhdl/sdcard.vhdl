@@ -400,7 +400,7 @@ begin
 
           when SEND_CMD1 =>  -- Send the SD card the initialization command.
             cs_bo            <= '0';     -- Enable the SD card.
-            txCmd_v          := CMD41_C & x"40000000" & FAKE_CRC_C;
+            txCmd_v          := CMD1_C & x"40000000" & FAKE_CRC_C;
             bitCnt_v         := txCmd_v'length;  -- Set bit counter to the size of the command.
             getCmdResponse_v := true;  -- Sending a command that generates a response.
             doDeselect_v     := true;  -- De-select SD card after this command finishes.
