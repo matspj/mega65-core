@@ -25,6 +25,8 @@
 ;The Save tab options must not be changed as the code relies on them being 
 ;defined in a particular way (although the text of the buttons can be changed).
 ;
+;The number of screen lines used to display a page's options must not exceed 20.
+;
 ;The pages are listed in an index for each tab such that the code can traverse
 ;the lists as defined here.  The number of pages in a tab must also be defined.
 ;
@@ -58,54 +60,75 @@ configMagicByte1	=	$01
 
 
 ;-------------------------------------------------------------------------------
-;System tab
+;Input tab
 ;-------------------------------------------------------------------------------
-systemPageCnt	=	1
+inputPageCnt	=	1
 	
-systemOptions0:
-	.byte		$20			;option input type
-	.word		$0005			;offset into config table
-	.byte		$02			;bits for testing/setting
-	.defPStr	"joystick 1 amiga mouse mode:"	;label
-	.defPStr	'normal'		;option unset
-	.defPStr	"1351 emulation"	;option set
+inputOptions0:
 
 	.byte		$20			;option input type
 	.word		$0005			;offset into config table
-	.byte		$08			;bits for testing/setting
+;	.byte		$02			;bits for testing/setting
+	.byte		$01			;bits for testing/setting
+	.defPStr	"joystick 1 mouse mode:"	;label
+	.defPStr	'normal'		;option unset
+	.defPStr	"amiga to 1351 enabled"	;option set
+
+	.byte		$20			;option input type
+	.word		$0005			;offset into config table
+;	.byte		$08			;bits for testing/setting
+	.byte		$04			;bits for testing/setting
 	.defPStr	"joystick 1 amiga mouse detection:"	;label
 	.defPStr	'conservative'		;option unset
 	.defPStr	"aggressive"	;option set
 
 	.byte		$20			;option input type
 	.word		$0005			;offset into config table
-	.byte		$01			;bits for testing/setting
-	.defPStr	"joystick 2 amiga mouse mode:"	;label
+;	.byte		$01			;bits for testing/setting
+	.byte		$02			;bits for testing/setting
+	.defPStr	"joystick 2 mouse mode:"	;label
 	.defPStr	'normal'		;option unset
-	.defPStr	"1351 emulation"	;option set
+	.defPStr	"amiga to 1351 enabled"	;option set
 
 	.byte		$20			;option input type
 	.word		$0005			;offset into config table
-	.byte		$04			;bits for testing/setting
+;	.byte		$04			;bits for testing/setting
+	.byte		$08			;bits for testing/setting
 	.defPStr	"joystick 2 amiga mouse detection:"	;label
 	.defPStr	'conservative'		;option unset
 	.defPStr	"aggressive"	;option set
 
 
 	.byte		$00			;end of list type
-systemOptions0_end:
-	.assert		(systemOptions0_end - systemOptions0) < 256, error, "System Options too large!"
+inputOptions0_end:
+	.assert		(inputOptions0_end - inputOptions0) < 256, error, "Input Options too large!"
 
-systemPageIndex:
-	.word		systemOptions0
+inputPageIndex:
+	.word		inputOptions0
 	
 
 ;-------------------------------------------------------------------------------
-;Disk tab
+;Chipset tab
 ;-------------------------------------------------------------------------------
-diskPageCnt 	=	1
+chipsetPageCnt 	=	1
 
-diskOptions0:
+chipsetOptions0:
+	; Dummy field for RTC values.
+  	; In reality, we read it from the RTC, and write the values
+	; back there.
+	.byte		$60	
+	.word		$01f0
+	.defPStr	"real-time clock:"
+rtc_values:
+	.byte		$00, $00, $00, $00, $00, $00
+
+	.byte		$20			;option input type
+	.word		$0020			;offset into config table
+	.byte		$01			;bits for testing/setting
+	.defPStr	"dmagic revision:"	;label
+	.defPStr	'f018 (c65 roms < 910523)'		;option unset
+	.defPStr	"f018b"	;option set
+
 	.byte		$20			;option input type
 	.word		$0004			;offset into config table
 	.byte		$01			;bits for testing/setting
@@ -123,12 +146,20 @@ diskOptions0:
 	.byte		$00, $00, $00, $00
 	.byte		$00, $00, $00, $00
 
-	.byte		$00			;end of list type
-diskOptions0_end:
-	.assert		(diskOptions0_end - diskOptions0) < 256, error, "Disk Options 0 too large!"
+	.byte		$20			;option input type
+	.word		$000F			;offset into config table
+	.byte		$80			;bits for testing/setting
+	.defPStr	"long fn support (experimental):"	;label
+	.defPStr	"disable";option unset
+	.defPStr	'enable';option set
 
-diskPageIndex:
-	.word		diskOptions0
+
+	.byte		$00			;end of list type
+chipsetOptions0_end:
+	.assert		(chipsetOptions0_end - chipsetOptions0) < 256, error, "Chipset Options 0 too large!"
+
+chipsetPageIndex:
+	.word		chipsetOptions0
 	
 	
 ;-------------------------------------------------------------------------------
@@ -141,8 +172,23 @@ videoOptions0:
 	.word		$0002
 	.byte		$80
 	.defPStr	"video mode:"
-	.defPStr	"pal  50hz (800*600)"
-	.defPStr	"ntsc 60hz (800*600)"
+	.defPStr	"pal  50hz (720*576)"
+	.defPStr	"ntsc 60hz (720*480)"
+
+	.byte		$20
+	.word		$000D
+	.byte		$02
+	.defPStr	"digital video:"
+	.defPStr	"enhanced (with audio)"
+	.defPStr	"dvi only (no audio)"
+
+	.byte		$20
+	.word		$0021
+	.byte		$20
+	.defPStr	"crt emulation:"
+	.defPStr	"off"
+	.defPStr	"on"
+
 	.byte		$00
 videoOptions0_end:
 	.assert		(videoOptions0_end - videoOptions0) < 256, error, "Video Options 0 too large!"
@@ -154,7 +200,7 @@ videoPageIndex:
 ;-------------------------------------------------------------------------------
 ;Audio tab
 ;-------------------------------------------------------------------------------
-audioPageCnt	=	1
+audioPageCnt	=	2
 
 audioOptions0:
 	.byte		$20
@@ -165,19 +211,18 @@ audioOptions0:
 	.defPStr	"mono"
 
 	.byte		$20
+	.word		$0022
+	.byte		$01
+	.defPStr	"sid generation:"
+	.defPStr	"6581"
+	.defPStr	"8580"
+
+	.byte		$20
 	.word		$0003
 	.byte		$20
 	.defPStr	"swap stereo channels:"
 	.defPStr	"no"
 	.defPStr	"yes"
-
-	.byte		$20
-	.word		$0003
-	.byte		$80
-	.defPStr	"dac algorithm:"
-	.defPStr	"pdm"
-	.defPStr	"pwm"
-
 
 	.byte		$20
 	.word		$0003
@@ -189,9 +234,24 @@ audioOptions0:
 	.byte		$00
 audioOptions0_end:
 	.assert		(audioOptions0_end - audioOptions0) < 256, error, "Audio Options 0 too large!"
+
+audioOptions1:
+	.byte		$20
+	.word		$0003
+	.byte		$80
+	.defPStr	"dac algorithm:"
+	.defPStr	"pdm"
+	.defPStr	"pwm"
+
+	.byte		$00
+
+audioOptions1_end:
+	.assert		(audioOptions1_end - audioOptions1) < 256, error, "Audio Options 1 too large!"
 	
+
 audioPageIndex:
 	.word		audioOptions0
+	.word		audioOptions1
 
 
 ;-------------------------------------------------------------------------------
@@ -204,6 +264,7 @@ networkOptions0:
 	.word		$0006
 	.defPStr	"mac address:"
 	.byte		$00, $00, $00, $00, $00, $00
+
 	.byte		$00
 networkOptions0_end:
 	.assert		(networkOptions0_end - networkOptions0) < 256, error, "Network Options 0 too large!"
@@ -218,19 +279,19 @@ networkPageIndex:
 savePageCnt	=	1
 
 ;*******************************************************************************
-;Do not change the order or number of options in these lists!
+;Do not change the order or number of options in these lists without code change!
 ;*******************************************************************************
 saveOptions0:
 	.byte		$10
 	.defPStr	"exit without saving"
 	.byte		$10
-	.defPStr	"apply settings now"
+	.defPStr	"restore factory defaults"
 	.byte		$10
-	.defPStr	"save for this boot and exit"
+	.defPStr	"exit and reboot to onboarding"
 	.byte		$10
 	.defPStr	"save as defaults and exit"
 	.byte		$00
-	
+
 saveOptions1:
 	.byte		$40
 	.byte		$40
@@ -246,3 +307,30 @@ saveOptions2:
 	
 savePageIndex:
 	.word		saveOptions0, saveOptions1, saveOptions2
+
+
+;-------------------------------------------------------------------------------
+;Help tab
+;-------------------------------------------------------------------------------
+helpPageCnt	=	1
+
+;*******************************************************************************
+;Do not change the order or number of options in these lists!
+;*******************************************************************************
+helpOptions0:
+	.byte		$40
+	.byte		$40
+	.byte		$40
+	.byte		$40
+	.byte		$40
+	.byte		$40
+	.byte		$40
+	.byte		$40
+	.byte		$40
+	.byte		$10
+	.defPStr	"ok"
+
+	.byte		$00
+	
+helpPageIndex:
+	.word		helpOptions0

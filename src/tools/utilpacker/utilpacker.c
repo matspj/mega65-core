@@ -1,6 +1,6 @@
 /*
   Utility packer:  Takes one or more program files and attaches them with a header
-  block in the format that Kickstart expects them to be found in the 32KB colour RAM.
+  block in the format that Hyppo expects them to be found in the 32KB colour RAM.
   These are the utilities that the hypervisor can launch, without needing to load
   anything from SD card or other storage.
 
@@ -10,10 +10,11 @@
 #include <stdlib.h>
 #include <strings.h>
 #include <string.h>
+#include <unistd.h>
 
 int util_len=0;
 unsigned char header_magic[4]={'M','6','5','U'};
-unsigned char util_body[32*1024];
+unsigned char util_body[(32+1)*1024];
 
 // XXX - We really should have a checksum or other integrity check
 #define HEADER_LEN 44
@@ -35,7 +36,7 @@ int load_util(char *filename, int ar_offset)
   header.self_lo=ar_offset&0xff;
   header.self_hi=(ar_offset>>8)&0xff;
   
-  FILE *f=fopen(filename,"r");
+  FILE *f=fopen(filename,"rb");
   if (!f) {
     fprintf(stderr,"Could not read utility '%s'\n",filename);
     exit(-1);
@@ -45,16 +46,11 @@ int load_util(char *filename, int ar_offset)
   while((bytes=fread(&util_body[len],1,32*1024-len,f))>0) {
     len+=bytes;
   }
-  if (len==32*1024) {
+  if (len>=32*1024) {
     fprintf(stderr,"ERROR: Utility '%s' is >=32KB.\n",filename);
     exit(-1);
   }
 
-  int next_offset=ar_offset+HEADER_LEN+len;
-  header.next_lo=next_offset&0xff;
-  header.next_hi=(next_offset>>8)&0xff;
-
-  
   // Search utility for name string
   header.name[0]=0;
   for(int i=0;i<len;i++)
@@ -69,13 +65,51 @@ int load_util(char *filename, int ar_offset)
       }
     }
   for(int i=0;i<4;i++) header.magic[i]=header_magic[i];
-  header.length_lo=len&0xff;
-  header.length_hi=(len>>8)&0xff;
 
   if (!header.name[0]) {
     fprintf(stderr,"ERROR: Utility does not contain PROP.M65U.NAME= string.\n");
     exit(-1);
   }
+
+#ifdef DONT_EXOMIZE
+  fclose(f);
+#else
+  // Exomize pack the utility
+  {
+    char cmd[1024];
+    unlink("exomized.prg");
+    snprintf(cmd,1024,"exomizer sfx sys -o exomized.prg %s",filename);
+    system(cmd);
+
+    f=fopen("exomized.prg","rb");
+    if (!f) {
+      fprintf(stderr,"Could not read packed utility from exomized.prg\n");
+      exit(-1);
+    }
+    len=0;
+    int bytes;
+    while((bytes=fread(&util_body[len],1,32*1024-len,f))>0) {
+      len+=bytes;
+    }
+
+    // Now post-pend PROP.M65U.NAME=.... string so that HYPPO's utility menu
+    // can still find it.
+    snprintf((char *)&util_body[len],1024,"PROP.M65U.NAME=%s",header.name);
+    len+=strlen((char *)&util_body[len]);
+    
+    if (len>=32*1024) {
+      fprintf(stderr,"ERROR: Utility '%s' packs to >=32KB (utility menu context has hypervisor in upper 32KB)\n",filename);
+      exit(-1);
+    }        
+  }
+#endif
+
+  header.length_lo=len&0xff;
+  header.length_hi=(len>>8)&0xff;
+  
+  int next_offset=ar_offset+HEADER_LEN+len;
+  header.next_lo=next_offset&0xff;
+  header.next_hi=(next_offset>>8)&0xff; 
   
   // Find entry point low by looking for SYS token
   for(int i=0;i<256;i++)
@@ -122,6 +156,7 @@ int load_util(char *filename, int ar_offset)
   util_len=(header.length_hi<<8)+header.length_lo;
   
   fclose(f);
+
   return 0;
 }
 
@@ -143,7 +178,7 @@ int main(int argc,char **argv)
     exit(-1);
   }
   
-  FILE *o=fopen(argv[1],"w");
+  FILE *o=fopen(argv[1],"wb");
   if (!o) {
     fprintf(stderr,"Could not open '%s' to write utility archive.\n",argv[1]);
     exit(-1);
@@ -153,9 +188,16 @@ int main(int argc,char **argv)
   unsigned char archive[ar_size];
   bzero(archive,ar_size);
 
-  // Skip the first 2KB of colour RAM, as it is used by C65 system.  This leaves
+  // Skip the first 2KB (plus a bit to work around a VIC-IV bug) of colour RAM, as it is used by C65 system.  This leaves
   // us 30KB of available space.
-  int ar_offset=2048;
+  int ar_offset=2048+80;
+
+  // Put some values in colour ram for testing alpha blending in simulation
+  for(int i=0;i<0xff;i+=2)
+    {
+      archive[i]=0x20; // alpha mode
+      archive[i+1]=0x01; // foreground = white
+    }
   
   for(int i=2;i<argc;i++)
     {

@@ -87,7 +87,7 @@ entity gs4510 is
 
     irq_hypervisor : in std_logic_vector(2 downto 0) := "000";    -- JBM
 
-    no_kickstart : in std_logic;
+    no_hyppo : in std_logic;
 
     reg_isr_out : in unsigned(7 downto 0);
     imask_ta_out : in std_logic;
@@ -122,6 +122,7 @@ entity gs4510 is
       monitor_map_enables_low : out std_logic_vector(3 downto 0) := "1111";
       monitor_map_enables_high : out std_logic_vector(3 downto 0) := "1111";
       monitor_interrupt_inhibit : out std_logic := '0';
+      monitor_memory_access_address : out unsigned(31 downto 0);
 
       ---------------------------------------------------------------------------
       -- Memory access interface used by monitor
@@ -143,8 +144,10 @@ entity gs4510 is
     -- Interface to ChipRAM in video controller (just 128KB for now)
     ---------------------------------------------------------------------------
     chipram_we : OUT STD_LOGIC := '0';
-    chipram_address : OUT unsigned(16 DOWNTO 0) := "00000000000000000";
-    chipram_datain : OUT unsigned(7 DOWNTO 0) := (others => '0');
+
+    chipram_clk : IN std_logic;
+    chipram_address : IN unsigned(19 DOWNTO 0) := to_unsigned(0,20);
+    chipram_dataout : OUT unsigned(7 DOWNTO 0);
 
     cpu_leds : out std_logic_vector(3 downto 0) := "1111";
 
@@ -170,11 +173,13 @@ entity gs4510 is
     -- fast IO port (clocked at core clock). 1MB address space
     ---------------------------------------------------------------------------
     fastio_addr : inout std_logic_vector(19 downto 0);
+    fastio_addr_fast : inout std_logic_vector(19 downto 0);
     fastio_read : out std_logic := '0';
     fastio_write : out std_logic := '0';
     fastio_wdata : out std_logic_vector(7 downto 0);
     fastio_rdata : in std_logic_vector(7 downto 0);
-    kickstart_rdata : in std_logic_vector(7 downto 0);
+    hyppo_rdata : in std_logic_vector(7 downto 0);
+    hyppo_address_out : out std_logic_vector(13 downto 0);
     sector_buffer_mapped : in std_logic;
     fastio_vic_rdata : in std_logic_vector(7 downto 0);
     fastio_colour_ram_rdata : in std_logic_vector(7 downto 0);
@@ -202,6 +207,16 @@ entity gs4510 is
     rom_at_c000 : in std_logic;
     rom_at_a000 : in std_logic;
     rom_at_8000 : in std_logic;
+
+ -- Debugging
+    debug_address_w_dbg_out : out std_logic_vector(16 downto 0);
+    debug_address_r_dbg_out : out std_logic_vector(16 downto 0);
+    debug_rdata_dbg_out : out std_logic_vector(7 downto 0);
+    debug_wdata_dbg_out : out std_logic_vector(7 downto 0);
+    debug_write_dbg_out : out std_logic;
+    debug_read_dbg_out : out std_logic;
+    debug4_state_out : out std_logic_vector(3 downto 0);
+    proceed_dbg_out : out std_logic;
 
     ---------------------------------------------------------------------------
     -- IO port to far call stack
@@ -295,7 +310,7 @@ architecture Behavioural of gs4510 is
   signal hypervisor_mode : std_logic := '1';
   signal hypervisor_trap_port : unsigned (6 downto 0)  := (others => '0');
   -- Have we ever replaced the hypervisor with another?
-  -- (used to allow once-only update of hypervisor by kick-up file)
+  -- (used to allow once-only update of hypervisor by hick-up file)
   signal hypervisor_upgraded : std_logic := '0';
   
   -- Information about instruction currently being executed
@@ -312,7 +327,7 @@ architecture Behavioural of gs4510 is
 --  signal accessing_ram : std_logic;
   signal accessing_slowram : std_logic;
   signal accessing_shadow : std_logic;
-  signal accessing_kickstart_fastio : std_logic;
+  signal accessing_hyppo_fastio : std_logic;
   signal accessing_cpuport : std_logic;
   signal accessing_hypervisor : std_logic;
   signal cpuport_num : unsigned(3 downto 0);
@@ -342,7 +357,7 @@ architecture Behavioural of gs4510 is
     Shadow,
     ROMRAM,
     FastIO,
-    Kickstart,
+    Hyppo,
     ColourRAM,
     VICIV,
     SlowRAM,
@@ -389,7 +404,6 @@ begin
       fastio_read <= '0';
       fastio_write <= '0';
       chipram_we <= '0';        
-      chipram_datain <= x"c0";    
 
       slow_access_request_toggle_drive <= slow_access_ready_toggle_buffer;
       slow_access_write_drive <= '0';
@@ -756,12 +770,12 @@ begin
             wait_states_non_zero <= '0';
           end if;
         end if;
-        -- @IO:GS $FFF8000-$FFFBFFF 16KB Kickstart/Hypervisor ROM
+        -- @IO:GS $FFF8000-$FFFBFFF 16KB Hyppo/Hypervisor ROM
         if long_address(19 downto 14)&"00" = x"F8" then
           accessing_fastio <= '0';
           fastio_read <= '0';
-          accessing_kickstart_fastio <= '1';
-          read_source <= Kickstart;
+          accessing_hyppo_fastio <= '1';
+          read_source <= Hyppo;
         end if;  
         if long_address(19 downto 16) = x"D" then
           if long_address(15 downto 14) = "00" then    --   $D{0,1,2,3}XXX
@@ -867,9 +881,9 @@ begin
         when FastIO =>
           report "reading normal fastio byte $" & to_hstring(fastio_rdata) severity note;
           return unsigned(fastio_rdata);
-        when KickStart =>
-          report "reading kickstart fastio byte $" & to_hstring(kickstart_rdata) severity note;
-          return unsigned(kickstart_rdata);
+        when Hyppo =>
+          report "reading hyppo fastio byte $" & to_hstring(hyppo_rdata) severity note;
+          return unsigned(hyppo_rdata);
         when SlowRAM =>
           report "reading slow RAM data. Word is $" & to_hstring(slow_access_rdata) severity note;
           return unsigned(slow_access_rdata);
@@ -888,7 +902,7 @@ begin
 
       accessing_fastio <= '0'; accessing_vic_fastio <= '0';
       accessing_cpuport <= '0'; accessing_colour_ram_fastio <= '0';
-      accessing_shadow <= '0'; accessing_kickstart_fastio <= '0';
+      accessing_shadow <= '0'; accessing_hyppo_fastio <= '0';
       accessing_slowram <= '0';
       slow_access_write_drive <= '0';
       charrom_write_cs <= '0';
@@ -930,14 +944,14 @@ begin
       elsif (long_address = x"0000001") then
         report "MEMORY: Writing to CPU PORT register" severity note;
         cpuport_value <= value;
+      elsif (long_address = x"0000002") then
+        report "MEMORY: Writing to CPU PORT register" severity note;
+        protected_hardware <= value;
       end if;
       
       if long_address(27 downto 17)="00000000000" or (long_address(27 downto 17)="01111111000" and hypervisor_mode='1') then
         report "writing to shadow RAM via chipram shadowing. addr=$" & to_hstring(long_address) severity note;
         fastio_write <= '0';
-        chipram_address <= long_address(16 downto 0);
-        chipram_we <= '1';
-        chipram_datain <= value;
         report "writing to chipram..." severity note;
         wait_states <= io_write_wait_states;
         if io_write_wait_states /= x"00" then
@@ -993,10 +1007,6 @@ begin
 
                 -- Write also to CHIP RAM, so that $1F800-FFF works as chipRAM
                 -- as well as colour RAM, when accessed via $D800+ portal
-                chipram_address(16 downto 11) <= "111111"; -- $1F8xx
-                chipram_address(10 downto 0) <= long_address(10 downto 0);
-                chipram_we <= '1';
-                chipram_datain <= value;
                 report "writing to chipram..." severity note;
                 
               end if;
@@ -1211,7 +1221,7 @@ begin
 
           case state is
             when ResetLow =>
-              -- Reset now maps kickstart at $8000-$BFFF, and enters through $8000
+              -- Reset now maps hyppo at $8000-$BFFF, and enters through $8000
               -- by triggering the hypervisor.
               -- XXX indicate source of hypervisor entry
               reset_cpu_state;

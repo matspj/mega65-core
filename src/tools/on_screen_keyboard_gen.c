@@ -6,7 +6,7 @@
 
 int main(int argc,char **argv)
 {
-  FILE *f=fopen(argv[1]?argv[1]:"keyboard.txt","r");
+  FILE *f=fopen(argv[1]?argv[1]:"keyboard.txt","rt");
 
   char line[1024];
   int b[32];
@@ -79,7 +79,7 @@ int main(int argc,char **argv)
     
     // Remove boxes around characters
     int y=0;
-    for(int x=0;line[x];x++) {
+    for(int x=0;line[x+1];x++) {
       if (line[x]=='|'
 	  ||(line[x]=='+'&&(line[x-1]=='-'||line[x+1]=='-'))
 	  ||(line[x]=='-'&&(line[x-1]=='-'||line[x+1]=='-'))
@@ -100,7 +100,7 @@ int main(int argc,char **argv)
     out[y]=0;
     
     // Trim CR/LF from end
-    if (out[0]) out[strlen(out)-1]=0;
+    if (out[0]&&out[strlen(out)-1]=='\n') out[strlen(out)-1]=0;
 
     // Trim spaces from end
     while(out[0]&&out[strlen(out)-1]==' ') out[strlen(out)-1]=0;

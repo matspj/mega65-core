@@ -59,7 +59,9 @@ int main(int argc,char **argv)
   unsigned char archive[ar_size];
 
   // Start with empty memory
-  bzero(archive,ar_size);
+  // Some C compilers don't seem to have bzero on mingw, so just work around it.
+  for (int i=0;i<ar_size;i++) archive[i]=0;
+ //  bzero(archive,ar_size);
 
   int opt;
   while ((opt = getopt(argc, argv, "f:n:s:")) != -1) {
@@ -106,31 +108,34 @@ int main(int argc,char **argv)
 	  "  signal no_write_count : unsigned(7 downto 0) := x\"00\";\n"
 	  "  \n"
 	  "  type ram_t is array (0 to %d) of unsigned(7 downto 0);\n"
-	  "  signal ram : ram_t := (\n",
+	  "  constant initram : ram_t := (\n",
 	  name,bytes,name,name,bytes);
 
   for(i=0;i<bytes;i++)
 //    if (archive[i])
-    fprintf(o,"          %d => x\"%02x\", -- $%05x\n",i,archive[i],i);
-  fprintf(o,"          %d => x\"%02x\"); -- $%05x\n",i,archive[i],i);
+    fprintf(o,"          x\"%02x\", -- $%05x\n",archive[i],i);
+  fprintf(o,"          x\"%02x\"); -- $%05x\n",archive[i],i);
+
+  fprintf(o,"  shared variable ram : ram_t := initram;\n");
   
   // fprintf(o,"          others => x\"00\");\n" 
   fprintf(o,
 	  "begin\n"
 	  "\n"
 	  "--process for read and write operation.\n"
-	  "  PROCESS(Clk,ram,address,write_count,no_write_count)\n"
+	  "  PROCESS(Clk,write_count,no_write_count)\n"
 	  "  BEGIN\n"
-	  "    data_o <= ram(address);\n"
 	  "    writes <= write_count;\n"
 	  "    no_writes <= no_write_count;\n"
+	  "    data_o <= ram(address);\n"
 	  "    if(rising_edge(Clk)) then \n"
 	  "      if we /= '0' then\n"
 	  "        write_count <= write_count + 1;        \n"
-	  "        ram(address) <= data_i;\n"
+	  "        ram(address) := data_i;\n"
 	  "      else\n"
 	  "        no_write_count <= no_write_count + 1;        \n"
 	  "      end if;\n"
+//	  "      data_o <= ram(address);\n"
 	  "    end if;\n"
 	  "  END PROCESS;\n"
 	  "\n"

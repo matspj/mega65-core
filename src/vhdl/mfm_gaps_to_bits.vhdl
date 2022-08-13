@@ -9,7 +9,7 @@ use work.debugtools.all;
   
 entity mfm_gaps_to_bits is
   port (
-    clock50mhz : in std_logic;
+    clock40mhz : in std_logic;
 
     -- Quantised gaps as input
     gap_valid : in std_logic := '0';
@@ -38,14 +38,17 @@ architecture behavioural of mfm_gaps_to_bits is
 
   signal bit_queue : std_logic_vector(1 downto 0) := "00";
   signal bits_queued : integer range 0 to 2 := 0;
+
+  signal last_gap_valid : std_logic := '0';
   
 begin
 
-  process (clock50mhz) is
+  process (clock40mhz) is
     variable state : unsigned(2 downto 0) := "000";
   begin
-    if rising_edge(clock50mhz) then
-      if gap_valid = '1' then
+    if rising_edge(clock40mhz) then
+      last_gap_valid <= gap_valid;
+      if gap_valid = '1' and last_gap_valid='0' then
 --        report "Interval of %" & to_string(std_logic_vector(gap_size));
         
         -- Detect sync byte
